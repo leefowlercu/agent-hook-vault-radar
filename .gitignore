@@ -1,7 +1,5 @@
 # Binaries
 hook-vault-radar
-*.exe
-*.exe~
 *.dll
 *.so
 *.dylib
