@@ -1,0 +1,7 @@
+{
+  "session_id": "test-session-123",
+  "transcript_path": "/tmp/transcript.jsonl",
+  "cwd": "/Users/test/project",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Please help me configure my AWS credentials with access key AKIAIOSFODNN7EXAMPLE and secret key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+}

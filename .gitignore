@@ -1,0 +1,40 @@
+# Binaries
+hook-vault-radar
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config files (may contain sensitive data)
+config.yaml
+.hook-vault-radar/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+tmp/
