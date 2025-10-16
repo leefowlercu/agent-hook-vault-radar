@@ -64,7 +64,7 @@ chmod +x ~/.local/bin/hook-vault-radar
 
 ## Configuration
 
-Configuration is loaded from `~/.hook-vault-radar/config.yaml` (or current directory). All settings have sensible defaults.
+Configuration is loaded from `~/.agent-hooks/vault-radar/config.yaml` (or current directory). All settings have sensible defaults.
 
 ### Environment Variables (.env File)
 
@@ -82,9 +82,9 @@ HCP_CLIENT_SECRET=your-client-secret
 ```
 
 **.env File Locations** (all existing files are loaded; later files override earlier ones):
-1. `~/.hook-vault-radar/.env.local` - Local overrides (config directory) - **highest precedence**
+1. `~/.agent-hooks/vault-radar/.env.local` - Local overrides (config directory) - **highest precedence**
 2. `./.env.local` - Local overrides (current directory)
-3. `~/.hook-vault-radar/.env` - Config directory
+3. `~/.agent-hooks/vault-radar/.env` - Config directory
 4. `./.env` - Current directory - **lowest precedence**
 
 **Note**: `.env` files are gitignored to prevent accidental commit of secrets.
@@ -98,11 +98,12 @@ vault_radar:
   command: "vault-radar"
   scan_command: "scan file"
   timeout_seconds: 30
-  extra_args: ["--disable-ui"]
+  extra_args: []  # Additional vault-radar flags (--disable-ui is always included automatically)
 
 logging:
   level: "info"  # debug, info, warn, error
   format: "json" # json or text
+  log_file: ""   # Optional: path to log file (empty = stderr only, supports ~ for home dir)
 
 decision:
   block_on_findings: true
@@ -317,12 +318,41 @@ cat testdata/claude/userpromptsubmit_clean.json | ./hook-vault-radar --framework
 
 ## Logging
 
-All logs go to stderr in JSON format (configurable to text). Stdout is reserved exclusively for hook framework communication.
+By default, all logs go to stderr in JSON format (configurable to text). Stdout is reserved exclusively for hook framework communication.
 
 Example log entry:
 ```json
 {"time":"2025-10-15T10:30:00Z","level":"INFO","msg":"scan completed","has_findings":true,"finding_count":1,"duration":"1.2s"}
 ```
+
+### Debugging Hooks with File Logging
+
+When running as a hook in an AI agent framework (like Claude Code), stderr output may not be easily accessible. To debug hook execution, enable file-based logging:
+
+**Configuration** (`~/.agent-hooks/vault-radar/config.yaml`):
+```yaml
+logging:
+  level: "debug"  # Enable debug logging
+  format: "json"
+  log_file: "~/.agent-hooks/vault-radar/logs/hook.log"  # Log to file
+```
+
+**Or use environment variable**:
+```bash
+export HOOK_VAULT_RADAR_LOGGING_LOG_FILE="~/.agent-hooks/vault-radar/logs/hook.log"
+export HOOK_VAULT_RADAR_LOGGING_LEVEL="debug"
+```
+
+**Monitor logs in real-time**:
+```bash
+tail -f ~/.agent-hooks/vault-radar/logs/hook.log
+```
+
+When file logging is enabled, logs are written to BOTH stderr and the specified file. The debug level includes:
+- Raw stdin input received from the hook framework
+- Detailed parsing and scanning information
+- Complete decision-making process
+- Any errors encountered during execution
 
 ## Security Considerations
 

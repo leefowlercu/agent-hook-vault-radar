@@ -12,11 +12,12 @@ var DefaultConfig = Config{
 		Command:        "vault-radar",
 		ScanCommand:    "scan file",
 		TimeoutSeconds: 30,
-		ExtraArgs:      []string{"--disable-ui"},
+		ExtraArgs:      []string{},
 	},
 	Logging: LoggingConfig{
-		Level:  "info",
-		Format: "json",
+		Level:   "info",
+		Format:  "json",
+		LogFile: "", // Empty = stderr only, set path to enable file logging
 	},
 	Decision: DecisionConfig{
 		BlockOnFindings:   true,
@@ -28,9 +29,9 @@ var DefaultConfig = Config{
 func GetDefaultConfigDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".hook-vault-radar"
+		return ".agent-hooks/vault-radar"
 	}
-	return filepath.Join(home, ".hook-vault-radar")
+	return filepath.Join(home, ".agent-hooks/vault-radar")
 }
 
 // GetDefaultConfigPath returns the default configuration file path

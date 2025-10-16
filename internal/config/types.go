@@ -18,8 +18,9 @@ type VaultRadarConfig struct {
 
 // LoggingConfig contains logging configuration
 type LoggingConfig struct {
-	Level  string `mapstructure:"level" yaml:"level"`
-	Format string `mapstructure:"format" yaml:"format"`
+	Level   string `mapstructure:"level" yaml:"level"`
+	Format  string `mapstructure:"format" yaml:"format"`
+	LogFile string `mapstructure:"log_file" yaml:"log_file"` // Optional file path for logging (empty = stderr only)
 }
 
 // DecisionConfig contains configuration for decision-making logic

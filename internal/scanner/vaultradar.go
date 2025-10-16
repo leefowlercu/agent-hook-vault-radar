@@ -138,8 +138,11 @@ func (s *VaultRadarScanner) buildCommandArgs(filePath, outputFile string) []stri
 	// Add the required outfile flag
 	args = append(args, "--outfile", outputFile)
 
-	// Add format flag (must be two separate arguments)
+	// Add format flag
 	args = append(args, "--format", "json")
+
+	// Always disable UI since this runs non-interactively (stdin/stdout used for hook communication)
+	args = append(args, "--disable-ui")
 
 	// Add any extra arguments from config
 	args = append(args, s.cfg.VaultRadar.ExtraArgs...)

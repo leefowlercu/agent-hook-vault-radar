@@ -10,7 +10,7 @@ BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 # Install path
-INSTALL_PATH ?= $(HOME)/.local/bin
+INSTALL_PATH ?= $(HOME)/.agent-hooks/vault-radar
 
 # Go parameters
 GOCMD := go

@@ -1,11 +1,13 @@
 package processor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/config"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/decision"
@@ -65,9 +67,20 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 		return fmt.Errorf("failed to get framework %q; available frameworks: %v", frameworkName, available)
 	}
 
-	hookInput, err := fw.ParseInput(stdin)
+	// Read stdin into buffer so we can log it and still parse it
+	rawInput, err := io.ReadAll(stdin)
 	if err != nil {
-		p.logger.Error("failed to parse input", "error", err)
+		p.logger.Error("failed to read stdin", "error", err)
+		return fmt.Errorf("failed to read stdin; %w", err)
+	}
+
+	// Log raw input for debugging
+	p.logger.Debug("received raw stdin", "length", len(rawInput), "content", string(rawInput))
+
+	// Parse input from the buffer
+	hookInput, err := fw.ParseInput(bytes.NewReader(rawInput))
+	if err != nil {
+		p.logger.Error("failed to parse input", "error", err, "raw_input", string(rawInput))
 		return fmt.Errorf("failed to parse input; %w", err)
 	}
 
@@ -174,12 +187,53 @@ func setupLogger(cfg *config.Config) *slog.Logger {
 		Level: level,
 	}
 
+	// Determine output writer(s)
+	var output io.Writer = os.Stderr
+
+	// If log file is configured, create a multi-writer
+	if cfg.Logging.LogFile != "" {
+		logFile, err := openLogFile(cfg.Logging.LogFile)
+		if err != nil {
+			// Fall back to stderr only and log the error
+			fmt.Fprintf(os.Stderr, "Failed to open log file %s: %v\n", cfg.Logging.LogFile, err)
+		} else {
+			// Write to both stderr and file
+			output = io.MultiWriter(os.Stderr, logFile)
+		}
+	}
+
 	var handler slog.Handler
 	if cfg.Logging.Format == "json" {
-		handler = slog.NewJSONHandler(os.Stderr, opts)
+		handler = slog.NewJSONHandler(output, opts)
 	} else {
-		handler = slog.NewTextHandler(os.Stderr, opts)
+		handler = slog.NewTextHandler(output, opts)
 	}
 
 	return slog.New(handler)
+}
+
+// openLogFile opens or creates a log file for writing
+func openLogFile(path string) (*os.File, error) {
+	// Expand ~ to home directory if present
+	if len(path) > 0 && path[0] == '~' {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home directory; %w", err)
+		}
+		path = filepath.Join(home, path[1:])
+	}
+
+	// Create parent directory if it doesn't exist
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create log directory; %w", err)
+	}
+
+	// Open file in append mode, create if doesn't exist
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file; %w", err)
+	}
+
+	return file, nil
 }

@@ -28,6 +28,7 @@ func InitConfig() error {
 	viper.SetDefault("vault_radar.extra_args", DefaultConfig.VaultRadar.ExtraArgs)
 	viper.SetDefault("logging.level", DefaultConfig.Logging.Level)
 	viper.SetDefault("logging.format", DefaultConfig.Logging.Format)
+	viper.SetDefault("logging.log_file", DefaultConfig.Logging.LogFile)
 	viper.SetDefault("decision.block_on_findings", DefaultConfig.Decision.BlockOnFindings)
 	viper.SetDefault("decision.severity_threshold", DefaultConfig.Decision.SeverityThreshold)
 
