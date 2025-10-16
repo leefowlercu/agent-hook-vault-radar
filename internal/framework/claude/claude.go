@@ -71,7 +71,7 @@ func (f *Framework) ParseInput(reader io.Reader) (types.HookInput, error) {
 // FormatOutput formats a decision as JSON for Claude Code
 func (f *Framework) FormatOutput(decision types.Decision, input types.HookInput) ([]byte, error) {
 	output := HookOutput{
-		Continue:       !decision.Block,
+		Continue:       true,
 		SuppressOutput: false,
 	}
 
@@ -94,6 +94,13 @@ func (f *Framework) FormatOutput(decision types.Decision, input types.HookInput)
 	}
 
 	return data, nil
+}
+
+// GetExitCode returns the appropriate exit code for Claude Code
+// Claude Code expects exit 0 with JSON containing "continue": false to block
+// Exit code 2 would cause Claude to show only stderr, ignoring our structured JSON
+func (f *Framework) GetExitCode(decision types.Decision) int {
+	return 0 // Always exit 0, blocking is controlled by JSON "continue" field
 }
 
 // GetName returns the framework name

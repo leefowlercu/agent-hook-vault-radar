@@ -128,16 +128,15 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 		"finding_count", len(scanResults.Findings),
 		"duration", scanResults.ScanDuration)
 
-	// Make decision using the handler
-	finalDecision, err := handler.MakeDecision(ctx, scanResults, hookInput)
+	// Make decision using the decision engine (framework-agnostic)
+	finalDecision, err := p.decisionEngine.Evaluate(ctx, scanResults)
 	if err != nil {
 		p.logger.Error("failed to make decision", "error", err)
 		return fmt.Errorf("failed to make decision; %w", err)
 	}
 
 	p.logger.Info("decision made",
-		"block", finalDecision.Block,
-		"exit_code", finalDecision.ExitCode)
+		"block", finalDecision.Block)
 
 	// Format output
 	output, err := fw.FormatOutput(finalDecision, hookInput)
@@ -159,9 +158,10 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 
 	p.logger.Info("hook processing completed successfully")
 
-	// Exit with appropriate code
-	if finalDecision.Block {
-		os.Exit(finalDecision.ExitCode)
+	// Get exit code from framework (framework determines exit code semantics)
+	exitCode := fw.GetExitCode(finalDecision)
+	if exitCode != 0 {
+		os.Exit(exitCode)
 	}
 
 	return nil

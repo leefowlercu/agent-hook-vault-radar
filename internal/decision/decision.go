@@ -2,6 +2,7 @@ package decision
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/config"
@@ -24,7 +25,6 @@ func NewEngine(cfg *config.Config) *Engine {
 func (e *Engine) Evaluate(ctx context.Context, results types.ScanResults) (types.Decision, error) {
 	decision := types.Decision{
 		Block:    false,
-		ExitCode: 0,
 		Metadata: make(map[string]any),
 	}
 
@@ -51,7 +51,6 @@ func (e *Engine) Evaluate(ctx context.Context, results types.ScanResults) (types
 	// Block if configured to do so and we have relevant findings
 	if e.cfg.Decision.BlockOnFindings {
 		decision.Block = true
-		decision.ExitCode = 2
 		decision.Reason = e.buildReasonMessage(relevantFindings)
 		decision.Metadata["findings"] = relevantFindings
 		decision.Metadata["finding_count"] = len(relevantFindings)
@@ -82,7 +81,7 @@ func (e *Engine) getSeverityLevel(severity string) int {
 		return 4
 	case "high":
 		return 3
-	case "medium":
+	case "medium", "info": // vault-radar uses "info" for many real secrets
 		return 2
 	case "low":
 		return 1
@@ -98,17 +97,18 @@ func (e *Engine) buildReasonMessage(findings []types.Finding) string {
 	}
 
 	var sb strings.Builder
+	sb.WriteString("\n")
 	sb.WriteString("Vault Radar detected ")
 
 	if len(findings) == 1 {
 		sb.WriteString("1 security finding:\n\n")
 	} else {
-		sb.WriteString(string(rune(len(findings))))
+		sb.WriteString(strconv.Itoa(len(findings)))
 		sb.WriteString(" security findings:\n\n")
 	}
 
 	for i, finding := range findings {
-		sb.WriteString(string(rune(i + 1)))
+		sb.WriteString(strconv.Itoa(i + 1))
 		sb.WriteString(". [")
 		sb.WriteString(strings.ToUpper(finding.Severity))
 		sb.WriteString("] ")

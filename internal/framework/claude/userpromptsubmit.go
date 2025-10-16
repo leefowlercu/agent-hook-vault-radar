@@ -47,39 +47,6 @@ func (h *UserPromptSubmitHandler) ExtractContent(ctx context.Context, input type
 	}, nil
 }
 
-// MakeDecision creates a decision based on scan results
-func (h *UserPromptSubmitHandler) MakeDecision(ctx context.Context, results types.ScanResults, input types.HookInput) (types.Decision, error) {
-	decision := types.Decision{
-		Block:    false,
-		ExitCode: 0,
-		Metadata: make(map[string]any),
-	}
-
-	if results.Error != nil {
-		// If scanning failed, we'll allow by default but log the error
-		decision.Metadata["scan_error"] = results.Error.Error()
-		return decision, nil
-	}
-
-	if results.HasFindings {
-		decision.Block = true
-		decision.ExitCode = 2
-
-		// Build a detailed reason message
-		reason := fmt.Sprintf("Vault Radar detected %d security finding(s) in your prompt:\n\n", len(results.Findings))
-		for i, finding := range results.Findings {
-			reason += fmt.Sprintf("%d. [%s] %s: %s\n", i+1, finding.Severity, finding.Type, finding.Description)
-		}
-		reason += "\nPlease remove or redact sensitive information before submitting."
-
-		decision.Reason = reason
-		decision.Metadata["findings"] = results.Findings
-		decision.Metadata["finding_count"] = len(results.Findings)
-	}
-
-	return decision, nil
-}
-
 // GetType returns the hook type name
 func (h *UserPromptSubmitHandler) GetType() string {
 	return userPromptSubmitType

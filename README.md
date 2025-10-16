@@ -107,7 +107,7 @@ logging:
 
 decision:
   block_on_findings: true
-  severity_threshold: "high" # critical, high, medium, low
+  severity_threshold: "medium" # critical, high, medium, low
 ```
 
 ### Environment Variable Overrides
@@ -132,8 +132,8 @@ The `decision.severity_threshold` setting controls which security findings trigg
 
 **Severity Levels** (from lowest to highest):
 - `low` (level 1) - Minor security concerns
-- `medium` (level 2) - Moderate security risks
-- `high` (level 3) - Serious security issues (default)
+- `medium` / `info` (level 2) - Moderate security risks; Vault Radar uses "info" for many real secrets like AWS keys (default)
+- `high` (level 3) - Serious security issues
 - `critical` (level 4) - Critical security vulnerabilities
 
 **How It Works**:
@@ -142,9 +142,9 @@ The threshold filters findings using a "greater than or equal to" comparison:
 
 | Threshold | Blocks on | Ignores |
 |-----------|-----------|---------|
-| `critical` | Critical findings only | High, Medium, Low |
-| `high` | Critical + High findings | Medium, Low |
-| `medium` | Critical + High + Medium findings | Low |
+| `critical` | Critical findings only | High, Medium, Info, Low |
+| `high` | Critical + High findings | Medium, Info, Low |
+| `medium` | Critical + High + Medium + Info findings | Low |
 | `low` | All findings | None |
 
 **Example**:
@@ -152,13 +152,14 @@ The threshold filters findings using a "greater than or equal to" comparison:
 ```yaml
 decision:
   block_on_findings: true
-  severity_threshold: "high"  # Block on HIGH and CRITICAL findings only
+  severity_threshold: "medium"  # Block on MEDIUM, INFO, HIGH, and CRITICAL findings
 ```
 
 If Vault Radar detects:
 - 1 CRITICAL finding → **Blocks** ✓
 - 2 HIGH findings → **Blocks** ✓
-- 3 MEDIUM findings → **Allows** (below threshold)
+- 3 MEDIUM findings → **Blocks** ✓
+- 3 INFO findings → **Blocks** ✓
 - 1 LOW finding → **Allows** (below threshold)
 
 **Note**: If `block_on_findings` is `false`, findings are still reported but never block execution, regardless of severity threshold.
@@ -221,13 +222,13 @@ cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claud
 ```json
 {
   "decision": "block",
-  "reason": "Vault Radar detected 1 security finding:\n\n1. [HIGH] aws_access_key: AWS Access Key detected\n\nPlease remove or redact sensitive information before proceeding.",
+  "reason": "Vault Radar detected 1 security finding:\n\n1. [INFO] aws_access_key_id: AWS access key ID (scan-content.txt)\n\nPlease remove or redact sensitive information before proceeding.",
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit"
   },
-  "continue": false,
+  "continue": true,
   "suppressOutput": false,
-  "systemMessage": "Vault Radar detected 1 security finding..."
+  "systemMessage": "Vault Radar detected 1 security finding:\n\n1. [INFO] aws_access_key_id: AWS access key ID (scan-content.txt)\n\nPlease remove or redact sensitive information before proceeding."
 }
 ```
 
@@ -312,9 +313,13 @@ cat testdata/claude/userpromptsubmit_clean.json | ./hook-vault-radar --framework
 
 ## Exit Codes
 
-- `0`: Success (content scanned, no blocking)
+Exit code behavior is framework-specific:
+
+**Claude Code (current implementation):**
+- `0`: All responses (blocking controlled by JSON `"continue"` and `"decision"` fields)
 - `1`: Error (unexpected failure)
-- `2`: Blocking decision (secrets found and blocked)
+
+When secrets are detected, the hook exits 0 and includes `"continue": true` with `"decision": "block"` in the JSON response to signal blocking. The user-facing message is provided in the `"reason"` and `"systemMessage"` fields.
 
 ## Logging
 

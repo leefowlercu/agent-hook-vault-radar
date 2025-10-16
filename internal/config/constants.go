@@ -21,7 +21,7 @@ var DefaultConfig = Config{
 	},
 	Decision: DecisionConfig{
 		BlockOnFindings:   true,
-		SeverityThreshold: "high",
+		SeverityThreshold: "medium",
 	},
 }
 

@@ -30,7 +30,6 @@ type Decision struct {
 	Block    bool           // Whether to block the action
 	Reason   string         // Human-readable explanation
 	Metadata map[string]any // Additional metadata for the hook framework
-	ExitCode int            // Exit code to return
 }
 
 // HookInput represents parsed input from a hook framework

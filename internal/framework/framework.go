@@ -15,6 +15,9 @@ type HookFramework interface {
 	// FormatOutput formats a decision as JSON for the framework
 	FormatOutput(decision types.Decision, input types.HookInput) ([]byte, error)
 
+	// GetExitCode returns the appropriate exit code for the framework based on the decision
+	GetExitCode(decision types.Decision) int
+
 	// GetName returns the framework name
 	GetName() string
 }
@@ -23,9 +26,6 @@ type HookFramework interface {
 type HookHandler interface {
 	// ExtractContent extracts scannable content from hook input
 	ExtractContent(ctx context.Context, input types.HookInput) (types.ScanContent, error)
-
-	// MakeDecision creates a decision based on scan results
-	MakeDecision(ctx context.Context, results types.ScanResults, input types.HookInput) (types.Decision, error)
 
 	// GetType returns the hook type name
 	GetType() string
