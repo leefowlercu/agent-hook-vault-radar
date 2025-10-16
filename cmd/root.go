@@ -22,9 +22,9 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().String("framework", "", "Hook framework to use (e.g., 'claude')")
-	rootCmd.Flags().String("log-level", "", "Logging level (debug, info, warn, error)")
-	rootCmd.Flags().String("log-format", "", "Logging format (json, text)")
+	rootCmd.Flags().String("framework", config.DefaultConfig.Framework, "Hook framework to use (e.g., 'claude')")
+	rootCmd.Flags().String("log-level", config.DefaultConfig.Logging.Level, "Logging level (debug, info, warn, error)")
+	rootCmd.Flags().String("log-format", config.DefaultConfig.Logging.Format, "Logging format (json, text)")
 
 	// Mark framework flag as required
 	rootCmd.MarkFlagRequired("framework")
