@@ -1,4 +1,4 @@
-# hook-vault-radar
+# agent-hook-vault-radar
 
 A Go program that integrates AI agent hook frameworks with HashiCorp Vault Radar for secret scanning. It bridges the gap between interactive AI coding assistants and security scanning tools to prevent accidental exposure of sensitive information.
 
@@ -18,19 +18,19 @@ A Go program that integrates AI agent hook frameworks with HashiCorp Vault Radar
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    hook-vault-radar CLI                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  stdin (JSON) → Framework Parser → Content Extractor        │
-│                      ↓                                       │
-│                 Vault Radar Scanner                          │
-│                      ↓                                       │
-│                 Decision Engine                              │
-│                      ↓                                       │
-│              Response Formatter → stdout (JSON)              │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│               hook-vault-radar CLI                    │
+├───────────────────────────────────────────────────────┤
+│                                                       │
+│  stdin (JSON) → Framework Parser → Content Extractor  │
+│                         ↓                             │
+│                Vault Radar Scanner                    │
+│                         ↓                             │
+│                 Decision Engine                       │
+│                         ↓                             │
+│          Response Formatter → stdout (JSON)           │
+│                                                       │
+└───────────────────────────────────────────────────────┘
 ```
 
 ### Components
@@ -42,12 +42,13 @@ A Go program that integrates AI agent hook frameworks with HashiCorp Vault Radar
 
 ## Installation
 
-### Prerequisites
+### From Source
 
-- Go 1.21 or later
-- HashiCorp Vault Radar CLI installed and configured
+#### Prerequisites
 
-### Build from Source
+- Go 1.25.2 or later
+
+#### Build from Source
 
 ```bash
 go build -o hook-vault-radar
@@ -67,7 +68,7 @@ Configuration is loaded from `~/.hook-vault-radar/config.yaml` (or current direc
 
 ### Environment Variables (.env File)
 
-The application supports loading environment variables from `.env` files for HCP credentials and configuration:
+The application supports loading environment variables from `.env` files (in the same directory as the executable) for HCP credentials and configuration:
 
 ```bash
 # Copy the example file
@@ -80,22 +81,24 @@ HCP_CLIENT_ID=your-client-id
 HCP_CLIENT_SECRET=your-client-secret
 ```
 
-**.env File Locations** (checked in order):
-1. `./.env` - Current directory
-2. `~/.hook-vault-radar/.env` - Config directory
-3. `./.env.local` - Local overrides (current directory)
-4. `~/.hook-vault-radar/.env.local` - Local overrides (config directory)
+**.env File Locations** (all existing files are loaded; later files override earlier ones):
+1. `~/.hook-vault-radar/.env.local` - Local overrides (config directory) - **highest precedence**
+2. `./.env.local` - Local overrides (current directory)
+3. `~/.hook-vault-radar/.env` - Config directory
+4. `./.env` - Current directory - **lowest precedence**
 
 **Note**: `.env` files are gitignored to prevent accidental commit of secrets.
 
 ### YAML Configuration
 
 ```yaml
+framework: "claude"  # Hook framework to use (currently supported: claude)
+
 vault_radar:
   command: "vault-radar"
-  scan_command: "scan folder"
+  scan_command: "scan file"
   timeout_seconds: 30
-  extra_args: []
+  extra_args: ["--disable-ui"]
 
 logging:
   level: "info"  # debug, info, warn, error
@@ -122,6 +125,43 @@ export HOOK_VAULT_RADAR_DECISION_SEVERITY_THRESHOLD=medium
 4. Environment variables (`HOOK_VAULT_RADAR_*`)
 5. Command-line flags
 
+### Severity Threshold Configuration
+
+The `decision.severity_threshold` setting controls which security findings trigger blocking behavior. It acts as a **minimum severity level** - findings at the threshold level or higher will cause blocking when `block_on_findings` is `true`.
+
+**Severity Levels** (from lowest to highest):
+- `low` (level 1) - Minor security concerns
+- `medium` (level 2) - Moderate security risks
+- `high` (level 3) - Serious security issues (default)
+- `critical` (level 4) - Critical security vulnerabilities
+
+**How It Works**:
+
+The threshold filters findings using a "greater than or equal to" comparison:
+
+| Threshold | Blocks on | Ignores |
+|-----------|-----------|---------|
+| `critical` | Critical findings only | High, Medium, Low |
+| `high` | Critical + High findings | Medium, Low |
+| `medium` | Critical + High + Medium findings | Low |
+| `low` | All findings | None |
+
+**Example**:
+
+```yaml
+decision:
+  block_on_findings: true
+  severity_threshold: "high"  # Block on HIGH and CRITICAL findings only
+```
+
+If Vault Radar detects:
+- 1 CRITICAL finding → **Blocks** ✓
+- 2 HIGH findings → **Blocks** ✓
+- 3 MEDIUM findings → **Allows** (below threshold)
+- 1 LOW finding → **Allows** (below threshold)
+
+**Note**: If `block_on_findings` is `false`, findings are still reported but never block execution, regardless of severity threshold.
+
 ## Usage
 
 ### Claude Code Integration
@@ -133,7 +173,6 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -162,7 +201,9 @@ cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claud
 ./hook-vault-radar --help
 ```
 
-## Hook Flow Example
+## Hook Flow Example (Claude Framework - UserPromptSubmit)
+
+**Note**: This example shows the input/output format for the Claude framework's `UserPromptSubmit` hook. Other hooks in the Claude framework (such as future tool-specific hooks) may have different input/output structures. Hook frameworks other than Claude will have entirely different formats.
 
 ### Input (stdin)
 ```json
@@ -206,19 +247,41 @@ cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claud
 
 ```
 agent-hook-vault-radar/
-├── main.go                            # Entry point
-├── cmd/
-│   └── root.go                        # Cobra root command
-├── internal/
-│   ├── config/                        # Configuration management
-│   ├── framework/                     # Hook framework abstractions
-│   │   └── claude/                    # Claude Code implementation
-│   ├── scanner/                       # Scanner interface + implementations
-│   ├── decision/                      # Decision engine and policies
-│   └── processor/                     # Main orchestration logic
-├── pkg/
-│   └── types/                         # Shared type definitions
-└── testdata/                          # Test fixtures
+├── main.go                              # Entry point
+├── go.mod                               # Go module definition
+├── go.sum                               # Go module checksums
+├── Makefile                             # Build automation
+├── README.md                            # Project documentation
+├── .gitignore                           # Git ignore rules
+├── cmd/                                 # CLI commands
+│   ├── root.go                          # Cobra root command
+│   └── version.go                       # Version subcommand
+├── internal/                            # Internal packages
+│   ├── config/                          # Configuration management
+│   │   ├── config.go                    # Viper config initialization
+│   │   ├── constants.go                 # Default configuration values
+│   │   └── types.go                     # Configuration type definitions
+│   ├── framework/                       # Hook framework abstractions
+│   │   ├── framework.go                 # Framework and handler interfaces
+│   │   ├── registry.go                  # Framework registration system
+│   │   └── claude/                      # Claude Code implementation
+│   │       ├── claude.go                # Claude framework implementation
+│   │       ├── types.go                 # Claude-specific types
+│   │       └── userpromptsubmit.go      # UserPromptSubmit handler
+│   ├── scanner/                         # Scanner interface + implementations
+│   │   ├── scanner.go                   # Scanner interface definition
+│   │   └── vaultradar.go                # Vault Radar CLI wrapper
+│   ├── decision/                        # Decision engine and policies
+│   │   └── decision.go                  # Policy-based decision making
+│   └── processor/                       # Main orchestration logic
+│       └── processor.go                 # Hook processing orchestration
+├── pkg/                                 # Public packages
+│   └── types/                           # Shared type definitions
+│       └── types.go                     # Common types used across packages
+└── testdata/                            # Test fixtures
+    └── claude/                          # Claude framework test data
+        ├── userpromptsubmit.json        # Test with secrets
+        └── userpromptsubmit_clean.json  # Test without secrets
 ```
 
 ### Testing
@@ -228,10 +291,10 @@ agent-hook-vault-radar/
 go build
 
 # Test with sample input
-cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --log-level debug
+cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claude --log-level debug
 
 # Test with clean input (no secrets)
-cat testdata/claude/userpromptsubmit_clean.json | ./hook-vault-radar
+cat testdata/claude/userpromptsubmit_clean.json | ./hook-vault-radar --framework claude
 ```
 
 ### Adding New Hook Frameworks
@@ -261,14 +324,6 @@ Example log entry:
 {"time":"2025-10-15T10:30:00Z","level":"INFO","msg":"scan completed","has_findings":true,"finding_count":1,"duration":"1.2s"}
 ```
 
-## Contributing
-
-This project follows the Golang Standards Project Layout and Go Style Guide. Contributions welcome.
-
-## License
-
-MIT License
-
 ## Security Considerations
 
 - Vault Radar CLI must be properly configured with valid credentials
@@ -278,9 +333,6 @@ MIT License
 
 ## Future Enhancements
 
-- Additional hook framework support (GitHub Actions, Jenkins, etc.)
-- Alternative scanner support (TruffleHog, git-secrets)
+- Additional hook framework support (OpenAI Codex, Gemini CLI, AWS Strands SDK, etc.)
 - Custom policy rules and severity mapping
-- Webhook notifications on findings
-- Caching layer for scan results
-- Metrics and telemetry
+
