@@ -58,8 +58,8 @@ go build -o hook-vault-radar
 
 ```bash
 # Install to ~/.local/bin (or your preferred location)
-cp hook-vault-radar ~/.local/bin/
-chmod +x ~/.local/bin/hook-vault-radar
+cp hook-vault-radar ~/.agent-hooks/vault-radar/hook-vault-radar
+chmod +x ~/.agent-hooks/vault-radar/hook-vault-radar
 ```
 
 ## Configuration
@@ -222,7 +222,7 @@ cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claud
 ```json
 {
   "decision": "block",
-  "reason": "Vault Radar detected 1 security finding:\n\n1. [INFO] aws_access_key_id: AWS access key ID (scan-content.txt)\n\nPlease remove or redact sensitive information before proceeding.",
+  "reason": "\nVault Radar detected 1 security finding:\n\n1. [INFO] aws_access_key_id: AWS access key ID (scan-content.txt)\n\nPlease remove or redact sensitive information before proceeding.",
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit"
   },
