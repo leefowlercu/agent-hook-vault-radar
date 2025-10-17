@@ -342,7 +342,7 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "hook-vault-radar --framework claude",
+            "command": "/<path>/<to>/hook-vault-radar --framework claude",
             "timeout": 30
           }
         ]
