@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2025-10-17
+
+### Added
+- CHANGELOG.md file following Keep a Changelog format
+
+### Changed
+- README Claude Code integration example to show full path placeholder
+
+### Fixed
+- Incorrect usage text in root command that claimed logging goes to stderr (actually logs to file only)
+
 ## [3.0.0] - 2025-10-17
 
 ### Added
@@ -68,7 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform release builds (darwin, linux, windows for amd64/arm64)
 - Comprehensive README documentation
 
-[unreleased]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.0...HEAD
+[unreleased]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v1.0.0...v1.1.0
