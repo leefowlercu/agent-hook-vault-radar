@@ -1,0 +1,208 @@
+# hook-vault-radar Configuration Example
+#
+# This file showcases all available configuration options for hook-vault-radar.
+# Copy this file to ~/.agent-hooks/vault-radar/config.yaml and customize as needed.
+#
+# Configuration sources (lowest to highest precedence):
+#   1. Default values (defined in code)
+#   2. .env files
+#   3. This config file (config.yaml)
+#   4. Environment variables (HOOK_VAULT_RADAR_* prefix)
+#   5. Command-line flags
+#
+# Note: The hook framework (e.g., "claude") must be specified via the --framework
+# command-line flag. It is not configurable in this file.
+
+# =============================================================================
+# Vault Radar Configuration
+# =============================================================================
+# Configuration for the Vault Radar CLI used for secret scanning
+
+vault_radar:
+  # Command to execute vault-radar (default: "vault-radar")
+  command: "vault-radar"
+
+  # Vault Radar scan subcommand (default: "scan file")
+  scan_command: "scan file"
+
+  # Timeout in seconds for vault-radar execution (default: 30)
+  timeout_seconds: 30
+
+  # Additional command-line arguments to pass to vault-radar
+  # Note: --disable-ui is always included automatically
+  # Example: ["--format", "json"]
+  extra_args: []
+
+# =============================================================================
+# Logging Configuration
+# =============================================================================
+# Controls application logging behavior
+# IMPORTANT: Logs are written to FILE ONLY (not stderr) to avoid interfering
+# with hook framework IO expectations. If no log file is configured, logging
+# is disabled (io.Discard).
+
+logging:
+  # Logging level (default: "info")
+  # Options: debug, info, warn, error
+  level: "info"
+
+  # Logging format (default: "json")
+  # Options: json, text
+  format: "json"
+
+  # Path to log file (REQUIRED for logging to work)
+  # Supports ~ for home directory expansion
+  # Default: "~/.agent-hooks/vault-radar/logs/hook.log"
+  # Set to empty string to disable all logging (not recommended)
+  log_file: "~/.agent-hooks/vault-radar/logs/hook.log"
+
+# =============================================================================
+# Decision Engine Configuration
+# =============================================================================
+# Controls when to block based on scan findings
+
+decision:
+  # Whether to block when findings are detected (default: true)
+  block_on_findings: true
+
+  # Minimum severity level to trigger blocking (default: "medium")
+  # Options: low, medium, info, high, critical
+  # Note: "info" is treated the same as "medium"
+  severity_threshold: "medium"
+
+# =============================================================================
+# Remediation Configuration
+# =============================================================================
+# Automatic actions to take when secrets are detected
+# Note: Remediation is DISABLED by default (opt-in feature)
+# Remediation results (success/failure) are informational only - they do not
+# affect the security blocking decision. User messages will show ✓/✗ indicators
+# for each remediation strategy.
+
+remediation:
+  # Enable remediation subsystem (default: false)
+  enabled: false
+
+  # Overall timeout in seconds for all remediation strategies (default: 10)
+  timeout_seconds: 10
+
+  # Remediation protocols define sets of actions to take
+  # Each protocol has triggers (when to execute) and strategies (what to do)
+  protocols: []
+
+    # Example Protocol 1: Log all blocked secrets
+    # - name: "log-blocked-secrets"
+    #   triggers:
+    #     # Execute when blocking occurs
+    #     on_block: true
+    #     # Don't execute on findings that don't block
+    #     on_findings: false
+    #     # Only for findings at or above this severity
+    #     severity_threshold: "medium"
+    #     # Optional: Filter by finding type patterns (supports wildcards)
+    #     # finding_types: ["aws_*", "github_*"]
+    #   strategies:
+    #     # Strategy 1: Log to file
+    #     - type: "log"
+    #       config:
+    #         log_file: "~/.agent-hooks/vault-radar/logs/findings.log"
+    #         format: "json"  # json or text
+
+    # Example Protocol 2: Alert on critical secrets
+    # - name: "alert-critical-secrets"
+    #   triggers:
+    #     on_block: true
+    #     severity_threshold: "high"
+    #   strategies:
+    #     # Strategy 1: Send webhook notification (NOT YET IMPLEMENTED)
+    #     - type: "webhook"
+    #       config:
+    #         url: "${SECURITY_WEBHOOK_URL}"  # Load from environment
+    #         method: "POST"
+    #         timeout_seconds: 5
+    #         headers:
+    #           Content-Type: "application/json"
+    #           Authorization: "Bearer ${WEBHOOK_TOKEN}"
+    #         body_template: |
+    #           {
+    #             "alert_type": "secret_detected",
+    #             "finding_type": "{{ .Type }}",
+    #             "severity": "{{ .Severity }}",
+    #             "session_id": "{{ .SessionID }}",
+    #             "timestamp": "{{ .Timestamp }}",
+    #             "framework": "{{ .Framework }}"
+    #           }
+    #
+    #     # Strategy 2: Store metadata in Vault (NOT YET IMPLEMENTED)
+    #     - type: "vault_kvv2"
+    #       config:
+    #         vault_addr: "${VAULT_ADDR}"
+    #         vault_token: "${VAULT_TOKEN}"
+    #         mount: "secret"
+    #         path_template: "leaked/{{ .Date }}/{{ .Type }}"
+    #         timeout_seconds: 5
+    #
+    #     # Strategy 3: Send to Slack (NOT YET IMPLEMENTED)
+    #     - type: "slack"
+    #       config:
+    #         webhook_url: "${SLACK_WEBHOOK_URL}"
+    #         channel: "#security-alerts"
+    #         timeout_seconds: 5
+
+    # Example Protocol 3: Track all findings for analytics
+    # - name: "track-all-findings"
+    #   triggers:
+    #     on_findings: true  # Execute whenever findings exist (blocking or not)
+    #     severity_threshold: "low"
+    #   strategies:
+    #     - type: "log"
+    #       config:
+    #         log_file: "~/.agent-hooks/vault-radar/logs/all-findings.log"
+    #         format: "json"
+
+# =============================================================================
+# Template Variables for Remediation Strategies
+# =============================================================================
+# The following variables are available in strategy templates:
+#
+# .Date           - YYYY-MM-DD format (e.g., "2025-10-16")
+# .Time           - HH:MM:SS format (e.g., "14:30:45")
+# .Timestamp      - Unix timestamp (e.g., 1697472645)
+# .Type           - Finding type (e.g., "aws_access_key_id")
+# .Severity       - Finding severity (e.g., "info", "high")
+# .SessionID      - Hook session ID from the framework
+# .Framework      - Framework name (e.g., "claude")
+# .ValueHash      - Hash of the detected secret value
+# .Location       - Where the secret was found
+# .Count          - Number of findings detected
+#
+# Usage in templates:
+#   path_template: "secrets/{{ .Date }}/{{ .Type }}"
+#   body_template: |
+#     {
+#       "type": "{{ .Type }}",
+#       "severity": "{{ .Severity }}"
+#     }
+
+# =============================================================================
+# Environment Variable Overrides
+# =============================================================================
+# All configuration values can be overridden via environment variables using
+# the HOOK_VAULT_RADAR_ prefix. Examples:
+#
+# export HOOK_VAULT_RADAR_LOGGING_LEVEL=debug
+# export HOOK_VAULT_RADAR_DECISION_SEVERITY_THRESHOLD=high
+# export HOOK_VAULT_RADAR_REMEDIATION_ENABLED=true
+#
+# Nested values use underscores:
+#   HOOK_VAULT_RADAR_VAULT_RADAR_TIMEOUT_SECONDS=60
+#   HOOK_VAULT_RADAR_LOGGING_LOG_FILE=/path/to/log
+
+# =============================================================================
+# Notes
+# =============================================================================
+# - Remediation strategies are executed concurrently for optimal performance
+# - Each strategy runs in its own goroutine with independent timeout
+# - Failed strategies don't affect others or the security blocking decision
+# - Results (success/failure) are shown in the user message with ✓/✗ indicators
+# - Strategies marked as "NOT YET IMPLEMENTED" will be available in future versions

@@ -11,17 +11,24 @@ import (
 )
 
 // InitConfig initializes the configuration using Viper
-func InitConfig() error {
+// If configPath is provided, it will be used as the configuration file path
+// If configPath is empty, default search paths are used
+func InitConfig(configPath string) error {
 	// Load .env file if it exists (fail silently if not found)
 	loadEnvFiles()
 
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(GetDefaultConfigDir())
-	viper.AddConfigPath(".")
+	// If custom config path provided, use it explicitly
+	if configPath != "" {
+		viper.SetConfigFile(configPath)
+	} else {
+		// Use default config search behavior
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath(GetDefaultConfigDir())
+		viper.AddConfigPath(".")
+	}
 
 	// Set defaults
-	viper.SetDefault("framework", DefaultConfig.Framework)
 	viper.SetDefault("vault_radar.command", DefaultConfig.VaultRadar.Command)
 	viper.SetDefault("vault_radar.scan_command", DefaultConfig.VaultRadar.ScanCommand)
 	viper.SetDefault("vault_radar.timeout_seconds", DefaultConfig.VaultRadar.TimeoutSeconds)
@@ -37,11 +44,17 @@ func InitConfig() error {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
-	// Read config file (it's okay if it doesn't exist)
+	// Read config file
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// Error reading config (other than not found)
 			return fmt.Errorf("failed to read config; %w", err)
 		}
+		// If custom config path was specified but file doesn't exist, that's an error
+		if configPath != "" {
+			return fmt.Errorf("config file not found: %s", configPath)
+		}
+		// Otherwise, config file not found is okay (use defaults)
 	}
 
 	return nil

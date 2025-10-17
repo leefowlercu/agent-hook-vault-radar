@@ -2,8 +2,10 @@ package decision
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/config"
 	"github.com/leefowlercu/agent-hook-vault-radar/pkg/types"
@@ -131,4 +133,68 @@ func (e *Engine) buildReasonMessage(findings []types.Finding) string {
 	sb.WriteString("\nPlease remove or redact sensitive information before proceeding.")
 
 	return sb.String()
+}
+
+// EnrichWithRemediation appends remediation results to the decision reason
+func EnrichWithRemediation(decision *types.Decision, results types.RemediationResults) {
+	if !results.Executed || len(results.Results) == 0 {
+		return
+	}
+
+	summary := buildRemediationSummary(results)
+	if decision.Reason != "" {
+		decision.Reason += "\n\n" + summary
+	} else {
+		decision.Reason = summary
+	}
+}
+
+// buildRemediationSummary creates a formatted summary of remediation results
+func buildRemediationSummary(results types.RemediationResults) string {
+	var sb strings.Builder
+
+	// Header with strategy count and total duration
+	sb.WriteString("Remediation actions taken (")
+	sb.WriteString(strconv.Itoa(len(results.Results)))
+	if len(results.Results) == 1 {
+		sb.WriteString(" strategy, ")
+	} else {
+		sb.WriteString(" strategies, ")
+	}
+	sb.WriteString(formatDuration(results.TotalDuration))
+	sb.WriteString(" total):")
+
+	// Individual strategy results
+	for _, result := range results.Results {
+		sb.WriteString("\n  ")
+
+		// Success/failure indicator
+		if result.Success {
+			sb.WriteString("✓ ") // U+2713 check mark
+		} else {
+			sb.WriteString("✗ ") // U+2717 ballot x
+		}
+
+		// Strategy message
+		sb.WriteString(result.Message)
+
+		// Duration
+		sb.WriteString(" (")
+		sb.WriteString(formatDuration(result.Duration))
+		sb.WriteString(")")
+	}
+
+	return sb.String()
+}
+
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+	ms := d.Milliseconds()
+
+	if ms < 1000 {
+		return fmt.Sprintf("%dms", ms)
+	}
+
+	seconds := float64(ms) / 1000.0
+	return fmt.Sprintf("%.1fs", seconds)
 }

@@ -8,29 +8,65 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/config"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/decision"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/framework"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/framework/claude"
+	"github.com/leefowlercu/agent-hook-vault-radar/internal/remediation"
+	"github.com/leefowlercu/agent-hook-vault-radar/internal/remediation/strategies"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/scanner"
+	"github.com/leefowlercu/agent-hook-vault-radar/pkg/types"
 )
 
 // Processor orchestrates the entire hook processing flow
 type Processor struct {
-	cfg            *config.Config
-	logger         *slog.Logger
-	scanner        scanner.Scanner
-	decisionEngine *decision.Engine
+	cfg               *config.Config
+	logger            *slog.Logger
+	scanner           scanner.Scanner
+	decisionEngine    *decision.Engine
+	remediationEngine *remediation.Engine
 }
 
 // NewProcessor creates a new processor instance
 func NewProcessor(cfg *config.Config, logger *slog.Logger) *Processor {
+	// Create remediation engine
+	remediationEngine := remediation.NewEngine(cfg, logger)
+
+	// Register strategies
+	// Note: Strategy configs come from cfg.Remediation.Protocols[].Strategies
+	// We register strategy types here, and they'll be instantiated with config at execution time
+	registerRemediationStrategies(remediationEngine, cfg, logger)
+
 	return &Processor{
-		cfg:            cfg,
-		logger:         logger,
-		scanner:        scanner.NewVaultRadarScanner(cfg, logger),
-		decisionEngine: decision.NewEngine(cfg),
+		cfg:               cfg,
+		logger:            logger,
+		scanner:           scanner.NewVaultRadarScanner(cfg, logger),
+		decisionEngine:    decision.NewEngine(cfg),
+		remediationEngine: remediationEngine,
+	}
+}
+
+// registerRemediationStrategies registers all available remediation strategies
+func registerRemediationStrategies(engine *remediation.Engine, cfg *config.Config, logger *slog.Logger) {
+	// Iterate through all protocol strategies and register them
+	for _, protocol := range cfg.Remediation.Protocols {
+		for _, strategyCfg := range protocol.Strategies {
+			switch strategyCfg.Type {
+			case "log":
+				logStrategy, err := strategies.NewLogStrategy(strategyCfg)
+				if err != nil {
+					logger.Warn("failed to create log strategy", "error", err)
+					continue
+				}
+				if err := engine.RegisterStrategy(logStrategy); err != nil {
+					logger.Warn("failed to register log strategy", "error", err)
+				}
+			default:
+				logger.Warn("unknown strategy type", "type", strategyCfg.Type)
+			}
+		}
 	}
 }
 
@@ -67,20 +103,17 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 		return fmt.Errorf("failed to get framework %q; available frameworks: %v", frameworkName, available)
 	}
 
-	// Read stdin into buffer so we can log it and still parse it
+	// Read stdin into buffer so we can still parse it
 	rawInput, err := io.ReadAll(stdin)
 	if err != nil {
 		p.logger.Error("failed to read stdin", "error", err)
 		return fmt.Errorf("failed to read stdin; %w", err)
 	}
 
-	// Log raw input for debugging
-	p.logger.Debug("received raw stdin", "length", len(rawInput), "content", string(rawInput))
-
 	// Parse input from the buffer
 	hookInput, err := fw.ParseInput(bytes.NewReader(rawInput))
 	if err != nil {
-		p.logger.Error("failed to parse input", "error", err, "raw_input", string(rawInput))
+		p.logger.Error("failed to parse input", "error", err)
 		return fmt.Errorf("failed to parse input; %w", err)
 	}
 
@@ -138,6 +171,27 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 	p.logger.Info("decision made",
 		"block", finalDecision.Block)
 
+	// Execute remediation if enabled
+	remediationInput := types.RemediationInput{
+		ScanResults: scanResults,
+		HookInput:   hookInput,
+		Decision:    finalDecision,
+		Timestamp:   time.Now(),
+		Framework:   frameworkName,
+	}
+
+	remediationResults := p.remediationEngine.Execute(ctx, remediationInput)
+
+	// Enrich decision message with remediation results
+	if remediationResults.Executed {
+		p.logger.Info("remediation executed",
+			"protocol", remediationResults.ProtocolName,
+			"strategies", len(remediationResults.Results),
+			"duration", remediationResults.TotalDuration)
+
+		decision.EnrichWithRemediation(&finalDecision, remediationResults)
+	}
+
 	// Format output
 	output, err := fw.FormatOutput(finalDecision, hookInput)
 	if err != nil {
@@ -168,6 +222,7 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 }
 
 // setupLogger creates and configures the logger based on configuration
+// Logs are written to file only (not stderr) to avoid interfering with hook framework IO
 func setupLogger(cfg *config.Config) *slog.Logger {
 	var level slog.Level
 	switch cfg.Logging.Level {
@@ -187,19 +242,21 @@ func setupLogger(cfg *config.Config) *slog.Logger {
 		Level: level,
 	}
 
-	// Determine output writer(s)
-	var output io.Writer = os.Stderr
+	// Determine output writer - file only, no stderr
+	var output io.Writer
 
-	// If log file is configured, create a multi-writer
 	if cfg.Logging.LogFile != "" {
 		logFile, err := openLogFile(cfg.Logging.LogFile)
 		if err != nil {
-			// Fall back to stderr only and log the error
+			// Critical error during startup - write to stderr and use discard
 			fmt.Fprintf(os.Stderr, "Failed to open log file %s: %v\n", cfg.Logging.LogFile, err)
+			output = io.Discard
 		} else {
-			// Write to both stderr and file
-			output = io.MultiWriter(os.Stderr, logFile)
+			output = logFile
 		}
+	} else {
+		// No log file configured - disable logging
+		output = io.Discard
 	}
 
 	var handler slog.Handler

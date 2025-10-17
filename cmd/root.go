@@ -22,13 +22,15 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().String("framework", config.DefaultConfig.Framework, "Hook framework to use (e.g., 'claude')")
+	rootCmd.PersistentFlags().String("config", "", "Path to configuration file (default: ~/.agent-hooks/vault-radar/config.yaml)")
+	rootCmd.Flags().String("framework", "", "Hook framework to use (e.g., 'claude')")
 	rootCmd.Flags().String("log-level", config.DefaultConfig.Logging.Level, "Logging level (debug, info, warn, error)")
 	rootCmd.Flags().String("log-format", config.DefaultConfig.Logging.Format, "Logging format (json, text)")
 
 	// Mark framework flag as required
 	rootCmd.MarkFlagRequired("framework")
 
+	// Bind flags to viper
 	viper.BindPFlag("framework", rootCmd.Flags().Lookup("framework"))
 	viper.BindPFlag("logging.level", rootCmd.Flags().Lookup("log-level"))
 	viper.BindPFlag("logging.format", rootCmd.Flags().Lookup("log-format"))
@@ -42,7 +44,10 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	err := config.InitConfig()
+	// Get custom config path if provided
+	configPath, _ := cmd.Flags().GetString("config")
+
+	err := config.InitConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize configuration; %w", err)
 	}
@@ -51,8 +56,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 }
 
 func runHook(cmd *cobra.Command, args []string) error {
-	// Get framework from configuration
 	framework := viper.GetString("framework")
+
 	return processor.Process(os.Stdin, os.Stdout, framework)
 }
 

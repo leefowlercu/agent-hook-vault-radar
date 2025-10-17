@@ -36,3 +36,6 @@ config.yaml
 # Temporary files
 *.tmp
 tmp/
+
+# WIP Docs
+docs/wip/

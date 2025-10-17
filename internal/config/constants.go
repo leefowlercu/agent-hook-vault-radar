@@ -7,7 +7,6 @@ import (
 
 // DefaultConfig provides default configuration values
 var DefaultConfig = Config{
-	Framework: "claude",
 	VaultRadar: VaultRadarConfig{
 		Command:        "vault-radar",
 		ScanCommand:    "scan file",
@@ -17,11 +16,16 @@ var DefaultConfig = Config{
 	Logging: LoggingConfig{
 		Level:   "info",
 		Format:  "json",
-		LogFile: "", // Empty = stderr only, set path to enable file logging
+		LogFile: "~/.agent-hooks/vault-radar/logs/hook.log", // File-only logging (no stderr)
 	},
 	Decision: DecisionConfig{
 		BlockOnFindings:   true,
 		SeverityThreshold: "medium",
+	},
+	Remediation: RemediationConfig{
+		Enabled:        false,              // Disabled by default, opt-in feature
+		TimeoutSeconds: 10,                 // 10 second timeout for all remediation strategies
+		Protocols:      []ProtocolConfig{}, // No default protocols, must be configured
 	},
 }
 
