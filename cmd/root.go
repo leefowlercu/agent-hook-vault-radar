@@ -15,8 +15,7 @@ var rootCmd = &cobra.Command{
 	Short: "Hook framework integration for Vault Radar scanning",
 	Long: "\nhook-vault-radar is a CLI tool that integrates with AI agent hook frameworks " +
 		"to scan content for secrets and sensitive data using HashiCorp Vault Radar.\n\n" +
-		"It reads hook data from stdin as JSON and outputs decisions to stdout as JSON. " +
-		"Logging is sent to stderr to keep stdout clean for hook framework communication.",
+		"It reads hook data from stdin as JSON and outputs decisions to stdout as JSON.",
 	PersistentPreRunE: runInit,
 	RunE:              runHook,
 }
