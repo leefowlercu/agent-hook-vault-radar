@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2025-12-10
+
+### Added
+- Gemini CLI framework support with BeforeAgent hook handler
+- Gemini-specific type definitions for input/output JSON structures
+- Test fixtures for Gemini BeforeAgent hook (with and without secrets)
+- Gemini CLI integration documentation and usage examples
+- Framework registration and handler routing for Gemini
+
+### Changed
+- README to include Gemini CLI integration section and command-line examples
+- Project structure documentation to show Gemini framework directory
+- Future enhancements section to reflect Gemini CLI support
+
 ## [3.0.1] - 2025-10-17
 
 ### Added
@@ -79,7 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform release builds (darwin, linux, windows for amd64/arm64)
 - Comprehensive README documentation
 
-[unreleased]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.1...HEAD
+[unreleased]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/leefowlercu/agent-hook-vault-radar/compare/v1.1.0...v2.0.0
