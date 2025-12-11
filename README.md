@@ -4,12 +4,13 @@ A Go program that integrates AI agent hook frameworks with HashiCorp Vault Radar
 
 ## Overview
 
-`hook-vault-radar` reads hook data from stdin (as JSON), scans the content using Vault Radar CLI, makes intelligent decisions based on findings, and outputs responses (as JSON) to stdout. This allows AI agent frameworks like Claude Code to automatically scan user prompts and code for secrets before processing.
+`hook-vault-radar` reads hook data from stdin (as JSON), scans the content using Vault Radar CLI, makes intelligent decisions based on findings, and outputs responses (as JSON) to stdout. This allows AI agent frameworks like Claude Code and Gemini CLI to automatically scan user prompts and code for secrets before processing.
 
 ## Features
 
 - **Extensible Framework Support**: Plugin-based architecture supports multiple hook frameworks
 - **Claude Code Integration**: Built-in support for Claude Code's UserPromptSubmit hook
+- **Gemini CLI Integration**: Built-in support for Gemini CLI's BeforeAgent hook
 - **Vault Radar Integration**: Leverages HashiCorp Vault Radar CLI for enterprise-grade secret detection
 - **Configurable Policies**: Customizable severity thresholds and blocking behavior
 - **Remediation System**: Automatic actions when secrets detected (logging, webhooks, etc.) - opt-in feature
@@ -352,22 +353,50 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 }
 ```
 
+### Gemini CLI Integration
+
+Add to your Gemini CLI hooks configuration:
+
+```json
+{
+  "hooks": [
+    {
+      "name": "vault-radar-scanner",
+      "type": "command",
+      "command": "/<path>/<to>/hook-vault-radar --framework gemini",
+      "timeout": 30000,
+      "matcher": {
+        "hookEventName": "BeforeAgent"
+      }
+    }
+  ]
+}
+```
+
+**Supported Hook**: `BeforeAgent` - Scans user prompts before agent planning begins
+
 ### Command Line
 
 The `--framework` flag is required to specify which hook framework you're using:
 
 ```bash
-# Process hook input from stdin (framework flag is required)
+# Claude Code - Process UserPromptSubmit hook
 cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claude
+
+# Gemini CLI - Process BeforeAgent hook
+cat testdata/gemini/beforeagent.json | ./hook-vault-radar --framework gemini
 
 # With debug logging
 cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claude --log-level debug
+cat testdata/gemini/beforeagent.json | ./hook-vault-radar --framework gemini --log-level debug
 
 # With custom config file
 cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claude --config /path/to/custom-config.yaml
+cat testdata/gemini/beforeagent.json | ./hook-vault-radar --framework gemini --config /path/to/custom-config.yaml
 
 # With custom config and debug logging
 cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claude --config ~/my-configs/dev.yaml --log-level debug
+cat testdata/gemini/beforeagent.json | ./hook-vault-radar --framework gemini --config ~/my-configs/dev.yaml --log-level debug
 
 # View help
 ./hook-vault-radar --help
@@ -413,6 +442,42 @@ cat testdata/claude/userpromptsubmit.json | ./hook-vault-radar --framework claud
 }
 ```
 
+## Hook Flow Example (Gemini Framework - BeforeAgent)
+
+**Note**: This example shows the input/output format for the Gemini CLI framework's `BeforeAgent` hook. This hook fires after the user submits a prompt, before agent planning begins.
+
+### Input (stdin)
+```json
+{
+  "session_id": "test-gemini-session-456",
+  "cwd": "/Users/test/gemini-project",
+  "hook_event_name": "BeforeAgent",
+  "timestamp": "2025-12-10T14:30:00Z",
+  "prompt": "Configure AWS with access key AKIAIOSFODNN7EXAMPLE and secret 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"
+}
+```
+
+### Output (stdout) - When Secrets Found
+```json
+{
+  "decision": "deny",
+  "hookSpecificOutput": {
+    "hookEventName": "BeforeAgent",
+    "additionalContext": "\nVault Radar detected 2 security findings:\n\n1. [INFO] aws_access_key_id: AWS Access Key detected (line 1)\n2. [INFO] aws_secret_access_key: AWS Secret Key detected (line 1)\n\nPlease remove or redact sensitive information before proceeding."
+  }
+}
+```
+
+### Output (stdout) - Clean Content
+```json
+{
+  "decision": "allow",
+  "hookSpecificOutput": {
+    "hookEventName": "BeforeAgent"
+  }
+}
+```
+
 ## Development
 
 ### Project Structure
@@ -436,10 +501,14 @@ agent-hook-vault-radar/
 │   ├── framework/                       # Hook framework abstractions
 │   │   ├── framework.go                 # Framework and handler interfaces
 │   │   ├── registry.go                  # Framework registration system
-│   │   └── claude/                      # Claude Code implementation
-│   │       ├── claude.go                # Claude framework implementation
-│   │       ├── types.go                 # Claude-specific types
-│   │       └── userpromptsubmit.go      # UserPromptSubmit handler
+│   │   ├── claude/                      # Claude Code implementation
+│   │   │   ├── claude.go                # Claude framework implementation
+│   │   │   ├── types.go                 # Claude-specific types
+│   │   │   └── userpromptsubmit.go      # UserPromptSubmit handler
+│   │   └── gemini/                      # Gemini CLI implementation
+│   │       ├── gemini.go                # Gemini framework implementation
+│   │       ├── types.go                 # Gemini-specific types
+│   │       └── beforeagent.go           # BeforeAgent handler
 │   ├── scanner/                         # Scanner interface + implementations
 │   │   ├── scanner.go                   # Scanner interface definition
 │   │   └── vaultradar.go                # Vault Radar CLI wrapper
@@ -459,9 +528,11 @@ agent-hook-vault-radar/
 │   └── types/                           # Shared type definitions
 │       └── types.go                     # Common types used across packages
 └── testdata/                            # Test fixtures
-    └── claude/                          # Claude framework test data
-        ├── userpromptsubmit.json        # Test with secrets
-        └── userpromptsubmit_clean.json  # Test without secrets
+    ├── claude/                          # Claude framework test data
+    │   ├── userpromptsubmit.json        # Test with secrets
+    │   └── userpromptsubmit_clean.json  # Test without secrets
+    └── gemini/                          # Gemini framework test data
+        └── beforeagent.json             # Test with secrets
 ```
 
 ### Testing
@@ -609,6 +680,7 @@ tail -f ~/.agent-hooks/vault-radar/logs/hook.log
 
 ## Future Enhancements
 
-- Additional hook framework support (OpenAI Codex, Gemini CLI, AWS Strands SDK, etc.)
+- Additional hook framework support (OpenAI Codex, AWS Strands SDK, etc.)
+- Additional Gemini CLI hooks (AfterAgent, BeforeTool, etc.)
 - Custom policy rules and severity mapping
 

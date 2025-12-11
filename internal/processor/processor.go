@@ -14,6 +14,7 @@ import (
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/decision"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/framework"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/framework/claude"
+	"github.com/leefowlercu/agent-hook-vault-radar/internal/framework/gemini"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/remediation"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/remediation/strategies"
 	"github.com/leefowlercu/agent-hook-vault-radar/internal/scanner"
@@ -95,6 +96,7 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 
 	// Register frameworks
 	framework.RegisterFramework("claude", claude.NewFramework())
+	framework.RegisterFramework("gemini", gemini.NewFramework())
 
 	// Get the specified framework
 	fw, err := framework.GetFramework(frameworkName)
@@ -127,6 +129,12 @@ func (p *Processor) ProcessHook(ctx context.Context, stdin io.Reader, stdout io.
 	// Type switch for framework-specific handling
 	switch f := fw.(type) {
 	case *claude.Framework:
+		handler, err = f.GetHandler(hookInput)
+		if err != nil {
+			p.logger.Error("failed to get handler", "error", err)
+			return fmt.Errorf("failed to get handler; %w", err)
+		}
+	case *gemini.Framework:
 		handler, err = f.GetHandler(hookInput)
 		if err != nil {
 			p.logger.Error("failed to get handler", "error", err)

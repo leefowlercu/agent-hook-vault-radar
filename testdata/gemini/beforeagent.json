@@ -1,0 +1,7 @@
+{
+  "session_id": "test-gemini-session-456",
+  "cwd": "/Users/test/gemini-project",
+  "hook_event_name": "BeforeAgent",
+  "timestamp": "2025-12-10T14:30:00Z",
+  "prompt": "Configure AWS with access key AKIAIOSFODNN73G2ASU8 and secret wJalrXUtnFEMI/K7MDENG/bPxRfiCY6gV3JIfq24"
+}

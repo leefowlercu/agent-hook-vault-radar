@@ -1,0 +1,7 @@
+{
+  "session_id": "test-gemini-session-789",
+  "cwd": "/Users/test/gemini-project",
+  "hook_event_name": "BeforeAgent",
+  "timestamp": "2025-12-10T14:35:00Z",
+  "prompt": "How do I configure environment variables in my application?"
+}
