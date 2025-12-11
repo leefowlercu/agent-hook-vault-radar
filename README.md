@@ -360,17 +360,21 @@ Add to your Gemini CLI hooks configuration:
 
 ```json
 {
-  "hooks": [
-    {
-      "name": "vault-radar-scanner",
-      "type": "command",
-      "command": "~/.local/bin/hook-vault-radar --framework gemini",
-      "timeout": 30000,
-      "matcher": {
-        "hookEventName": "BeforeAgent"
+  "hooks": {
+    "BeforeAgent": [
+      {
+        "hooks": [
+          {
+            "name": "vault-radar-scanner",
+            "type": "command",
+            "command": "~/.local/bin/hook-vault-radar --framework gemini",
+            "description": "Scan prompts for secrets using Vault Radar",
+            "timeout": 30000
+          }
+        ]
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
