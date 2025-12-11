@@ -64,8 +64,9 @@ go build -o hook-vault-radar
 
 ```bash
 # Install to ~/.local/bin (or your preferred location)
-cp hook-vault-radar ~/.agent-hooks/vault-radar/hook-vault-radar
-chmod +x ~/.agent-hooks/vault-radar/hook-vault-radar
+mkdir -p ~/.local/bin
+cp hook-vault-radar ~/.local/bin/hook-vault-radar
+chmod +x ~/.local/bin/hook-vault-radar
 ```
 
 ## Configuration
@@ -343,7 +344,7 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
         "hooks": [
           {
             "type": "command",
-            "command": "/<path>/<to>/hook-vault-radar --framework claude",
+            "command": "~/.local/bin/hook-vault-radar --framework claude",
             "timeout": 30
           }
         ]
@@ -363,7 +364,7 @@ Add to your Gemini CLI hooks configuration:
     {
       "name": "vault-radar-scanner",
       "type": "command",
-      "command": "/<path>/<to>/hook-vault-radar --framework gemini",
+      "command": "~/.local/bin/hook-vault-radar --framework gemini",
       "timeout": 30000,
       "matcher": {
         "hookEventName": "BeforeAgent"
@@ -582,7 +583,7 @@ cat testdata/claude/userpromptsubmit_clean.json | ./hook-vault-radar --framework
 # Build the binary
 make build
 
-# Install to ~/.agent-hooks/vault-radar/
+# Install to ~/.local/bin
 make install
 
 # Format code
