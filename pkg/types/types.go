@@ -41,11 +41,11 @@ type HookInput struct {
 
 // RemediationInput contains all context needed for remediation strategies
 type RemediationInput struct {
-	ScanResults ScanResults  // Complete scan results (includes findings)
-	HookInput   HookInput    // Original hook input
-	Decision    Decision     // Decision made by the decision engine
-	Timestamp   time.Time    // When the remediation is being executed
-	Framework   string       // Framework name for context
+	ScanResults ScanResults // Complete scan results (includes findings)
+	HookInput   HookInput   // Original hook input
+	Decision    Decision    // Decision made by the decision engine
+	Timestamp   time.Time   // When the remediation is being executed
+	Framework   string      // Framework name for context
 }
 
 // RemediationResult represents the result of executing a single remediation strategy

@@ -2,10 +2,10 @@ package config
 
 // Config represents the application configuration
 type Config struct {
-	VaultRadar  VaultRadarConfig   `mapstructure:"vault_radar" yaml:"vault_radar"`
-	Logging     LoggingConfig      `mapstructure:"logging" yaml:"logging"`
-	Decision    DecisionConfig     `mapstructure:"decision" yaml:"decision"`
-	Remediation RemediationConfig  `mapstructure:"remediation" yaml:"remediation"`
+	VaultRadar  VaultRadarConfig  `mapstructure:"vault_radar" yaml:"vault_radar"`
+	Logging     LoggingConfig     `mapstructure:"logging" yaml:"logging"`
+	Decision    DecisionConfig    `mapstructure:"decision" yaml:"decision"`
+	Remediation RemediationConfig `mapstructure:"remediation" yaml:"remediation"`
 }
 
 // VaultRadarConfig contains configuration for the Vault Radar CLI

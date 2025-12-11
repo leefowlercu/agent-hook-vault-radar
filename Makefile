@@ -63,7 +63,7 @@ install: build
 clean:
 	@echo "$(COLOR_YELLOW)Cleaning build artifacts...$(COLOR_RESET)"
 	@$(GOCLEAN)
-	@rm -f $(BINARY_NAME)
+	@rm -f $(BINARY_NAME) coverage.out
 	@echo "$(COLOR_GREEN)✓ Clean complete$(COLOR_RESET)"
 
 ## test: Run all tests with coverage
